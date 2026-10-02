@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d7a5f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Correction pH / TAC</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{
+  --bg:#f2f5f4; --card:#ffffff; --text:#1a2420; --muted:#5c6b66;
+  --accent:#0d7a5f; --accent2:#1f9d78; --border:#dde5e2; --input:#eef3f1;
+  --good:#0d7a5f; --danger:#c0442c;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#111815; --card:#182420; --text:#eaf2ef; --muted:#93a29c;
+    --accent:#2fbf94; --accent2:#3fd1a5; --border:#2a3a34; --input:#1f2e29;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#111815; --card:#182420; --text:#eaf2ef; --muted:#93a29c;
+  --accent:#2fbf94; --accent2:#3fd1a5; --border:#2a3a34; --input:#1f2e29;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+}
+header{
+  position:sticky; top:0; z-index:5;
+  padding:calc(14px + env(safe-area-inset-top,0px)) 16px 12px;
+  background:var(--accent); color:#fff;
+}
+header h1{margin:0 0 10px; font-size:1.15rem; font-weight:700;}
+.tabs{display:flex; gap:8px;}
+.tab{
+  flex:1; text-align:center; padding:9px 6px; border-radius:10px;
+  background:rgba(255,255,255,0.18); font-weight:600; cursor:pointer; font-size:0.92rem;
+  border:none; color:#fff;
+}
+.tab.active{background:#fff; color:var(--accent);}
+main{max-width:520px; margin:0 auto; padding:14px 12px 40px;}
+.card{
+  background:var(--card); border:1px solid var(--border); border-radius:14px;
+  padding:14px; margin-bottom:12px;
+}
+.card h2{margin:0 0 10px; font-size:1rem; color:var(--accent);}
+.card h3{margin:0 0 8px; font-size:0.92rem;}
+.row{display:flex; gap:10px; margin-bottom:8px; align-items:center;}
+.field{flex:1; display:flex; flex-direction:column; gap:4px;}
+label{font-size:0.75rem; color:var(--muted);}
+input[type=number]{
+  width:100%; padding:9px 10px; border-radius:9px; border:1px solid var(--border);
+  background:var(--input); color:var(--text); font-size:0.95rem;
+}
+.unit{font-size:0.75rem; color:var(--muted);}
+.corr-box{
+  display:flex; justify-content:space-between; align-items:center;
+  background:var(--input); border-radius:10px; padding:10px 12px; margin-top:2px;
+}
+.corr-box b{font-size:1.15rem; color:var(--accent);}
+.block{border-top:1px dashed var(--border); padding-top:10px; margin-top:10px;}
+.adv{margin-top:6px;}
+.adv summary{font-size:0.78rem; color:var(--muted); cursor:pointer;}
+.results{display:flex; gap:10px; margin-top:8px;}
+.res{
+  flex:1; background:rgba(31,157,120,0.10); border:1px solid var(--accent2);
+  border-radius:10px; padding:10px; text-align:center;
+}
+.res .v{font-size:1.15rem; font-weight:700; color:var(--accent);}
+.res .l{font-size:0.72rem; color:var(--muted);}
+footer{text-align:center; color:var(--muted); font-size:0.72rem; padding:10px 0 20px;}
+</style>
+</head>
+<body>
+<header>
+  <h1>💧 Correction pH / TAC</h1>
+  <div class="tabs">
+    <button class="tab active" id="tabPh" onclick="switchTab('ph')">pH</button>
+    <button class="tab" id="tabTac" onclick="switchTab('tac')">TAC</button>
+  </div>
+</header>
+<main>
+
+<section id="viewPh">
+  <div class="card">
+    <h2>Données</h2>
+    <div class="row">
+      <div class="field"><label>pH mesuré</label><input type="number" step="0.01" id="ph_mesure" value="8"></div>
+      <div class="field"><label>pH désiré</label><input type="number" step="0.01" id="ph_desire" value="7.4"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Volume (m³)</label><input type="number" step="0.1" id="ph_volume" value="20"></div>
+    </div>
+    <div class="corr-box"><span>Correction à apporter</span><b id="ph_corr">0.60</b></div>
+  </div>
+  <div id="ph_blocks"></div>
+</section>
+
+<section id="viewTac" style="display:none;">
+  <div class="card">
+    <h2>Données</h2>
+    <div class="row">
+      <div class="field"><label>TAC mesuré (°F)</label><input type="number" step="0.1" id="tac_mesure" value="4.4"></div>
+      <div class="field"><label>TAC désiré (°F)</label><input type="number" step="0.1" id="tac_desire" value="15"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Volume (m³)</label><input type="number" step="0.1" id="tac_volume" value="40"></div>
+    </div>
+    <div class="corr-box"><span>Correction à apporter</span><b id="tac_corr">10.6</b></div>
+  </div>
+  <div id="tac_blocks"></div>
+</section>
+
+<footer>Reprend les calculs du classeur « Correction_pH_TAC_TH ». Les valeurs par défaut (produit injecté, coefficients d et v) sont modifiables dans chaque palier.</footer>
+</main>
+
+<script>
+// ---- Configuration des paliers (reprend fidèlement les formules du fichier Excel) ----
+const phBlocks = [
+  {id:'p1', title:'Palier ± 0,1 unité', inj:4200,
+    K:(c)=>c*10, d:100, v:10,
+    prevue:(m,inj,d,v,vol)=> m - ((inj/(d*(vol/v)))/10) },
+  {id:'p2', title:'Palier ± 0,2 unité', inj:900,
+    K:(c)=>c*10/2, d:100, v:10,
+    prevue:(m,inj,d,v,vol)=> m - (((inj/(d*(vol/v)))/10)*2) },
+  {id:'p3', title:'Palier ± 0,4 unité', inj:450,
+    K:(c)=>(c/4)*10, d:100, v:10,
+    prevue:(m,inj,d,v,vol)=> m - (((inj/(d*(vol/v)))/10)*5) },
+  {id:'p4', title:'Palier ± 0,3 unité', inj:350,
+    K:(c)=>(c/3)*10, d:100, v:10,
+    prevue:(m,inj,d,v,vol)=> m - (((inj/(d*(vol/v)))/10)*5) },
+];
+const tacBlocks = [
+  {id:'t1', title:'Palier ± 1 °F', inj:6360,
+    K:(c)=>c, d:170, v:10,
+    prevue:(m,inj,d,v,vol)=> (inj/(d*(vol/v))) + m },
+  {id:'t2', title:'Palier ± 0,2 unité', inj:9000,
+    K:(c)=>c/2, d:1800, v:100,
+    prevue:(m,inj,d,v,vol)=> (inj/(d*(vol/v)))*2 + m },
+];
+
+function renderBlocks(containerId, blocks, prefix){
+  const el = document.getElementById(containerId);
+  el.innerHTML = blocks.map(b => `
+    <div class="card block" data-id="${b.id}">
+      <h3>${b.title}</h3>
+      <div class="row">
+        <div class="field"><label>Produit injecté (g ou L)</label><input type="number" step="0.01" class="inj" value="${b.inj}"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>d — dose unitaire (g ou L)</label><input type="number" step="0.01" class="dcoef" value="${b.d}"></div>
+        <div class="field"><label>v — coef. volume (m³)</label><input type="number" step="0.01" class="vcoef" value="${b.v}"></div>
+      </div>
+      <div class="results">
+        <div class="res"><div class="v resultat">–</div><div class="l">dose à injecter (g/L)</div></div>
+        <div class="res"><div class="v prevue">–</div><div class="l">valeur prévue</div></div>
+      </div>
+    </div>
+  `).join('');
+  el.querySelectorAll('input').forEach(inp => inp.addEventListener('input', ()=>compute(prefix)));
+}
+
+function fmt(n){ return isFinite(n) ? n.toFixed(2) : '–'; }
+
+function compute(prefix){
+  if(prefix==='ph'){
+    const m = parseFloat(document.getElementById('ph_mesure').value)||0;
+    const d = parseFloat(document.getElementById('ph_desire').value)||0;
+    const vol = parseFloat(document.getElementById('ph_volume').value)||0;
+    const corr = m - d;
+    document.getElementById('ph_corr').textContent = fmt(corr);
+    document.querySelectorAll('#ph_blocks .block').forEach((card,i)=>{
+      const b = phBlocks[i];
+      const inj = parseFloat(card.querySelector('.inj').value)||0;
+      const dc = parseFloat(card.querySelector('.dcoef').value)||0;
+      const vc = parseFloat(card.querySelector('.vcoef').value)||0;
+      const K = b.K(corr);
+      const resultat = K*dc*(vol/vc);
+      const prevue = b.prevue(m, inj, dc, vc, vol);
+      card.querySelector('.resultat').textContent = fmt(resultat);
+      card.querySelector('.prevue').textContent = fmt(prevue);
+    });
+    save('ph',{m,d,vol});
+  } else {
+    const m = parseFloat(document.getElementById('tac_mesure').value)||0;
+    const d = parseFloat(document.getElementById('tac_desire').value)||0;
+    const vol = parseFloat(document.getElementById('tac_volume').value)||0;
+    const corr = d - m;
+    document.getElementById('tac_corr').textContent = fmt(corr);
+    document.querySelectorAll('#tac_blocks .block').forEach((card,i)=>{
+      const b = tacBlocks[i];
+      const inj = parseFloat(card.querySelector('.inj').value)||0;
+      const dc = parseFloat(card.querySelector('.dcoef').value)||0;
+      const vc = parseFloat(card.querySelector('.vcoef').value)||0;
+      const K = b.K(corr);
+      const resultat = K*dc*(vol/vc);
+      const prevue = b.prevue(m, inj, dc, vc, vol);
+      card.querySelector('.resultat').textContent = fmt(resultat);
+      card.querySelector('.prevue').textContent = fmt(prevue);
+    });
+    save('tac',{m,d,vol});
+  }
+}
+
+function save(key,data){
+  try{ localStorage.setItem('corr_'+key, JSON.stringify(data)); }catch(e){}
+}
+function load(key){
+  try{ const v = localStorage.getItem('corr_'+key); return v?JSON.parse(v):null; }catch(e){ return null; }
+}
+
+function switchTab(t){
+  document.getElementById('viewPh').style.display = t==='ph' ? '' : 'none';
+  document.getElementById('viewTac').style.display = t==='tac' ? '' : 'none';
+  document.getElementById('tabPh').classList.toggle('active', t==='ph');
+  document.getElementById('tabTac').classList.toggle('active', t==='tac');
+}
+
+// ---- Enregistre le service worker pour le mode hors-ligne / l'installation ----
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+
+// init
+renderBlocks('ph_blocks', phBlocks, 'ph');
+renderBlocks('tac_blocks', tacBlocks, 'tac');
+const savedPh = load('ph');
+if(savedPh){
+  document.getElementById('ph_mesure').value = savedPh.m;
+  document.getElementById('ph_desire').value = savedPh.d;
+  document.getElementById('ph_volume').value = savedPh.vol;
+}
+const savedTac = load('tac');
+if(savedTac){
+  document.getElementById('tac_mesure').value = savedTac.m;
+  document.getElementById('tac_desire').value = savedTac.d;
+  document.getElementById('tac_volume').value = savedTac.vol;
+}
+compute('ph');
+compute('tac');
+document.querySelectorAll('#viewPh input, #viewTac input').forEach(inp=>{
+  if(!inp.closest('.block')) inp.addEventListener('input', ()=>compute(inp.closest('#viewPh')?'ph':'tac'));
+});
+</script>
+</body>
+</html>
